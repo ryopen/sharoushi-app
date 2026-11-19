@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>社労士学習アプリ</title>
+<style>
+body{font-family:sans-serif;background:#f3f6fa;margin:0;padding:16px;color:#222}
+main{max-width:650px;margin:auto}
+h1{font-size:23px;color:#174b83}
+.card{background:white;padding:20px;border-radius:12px;margin:15px 0;box-shadow:0 2px 8px #ddd}
+button{display:block;width:100%;padding:14px;margin:10px 0;border:0;border-radius:8px;background:#1769aa;color:white;font-size:16px}
+button:disabled{background:#aaa}
+.answer{background:#e9f3ff;padding:12px;border-radius:8px}
+</style>
+</head>
+<body>
+<main>
+<h1>社労士試験 学習アプリ</h1>
+<div class="card">
+<p id="stats"></p>
+<label>科目を選択</label>
+<select id="subject">
+<option value="all">全科目</option>
+<option value="労基">労働基準法</option>
+<option value="安衛">労働安全衛生法</option>
+<option value="労災">労災保険法</option>
+<option value="雇用">雇用保険法</option>
+</select>
+<button onclick="nextQuestion()">問題を出題</button>
+</div>
+<div class="card" id="quiz" hidden>
+<p id="category"></p>
+<h3 id="question"></h3>
+<button onclick="answer(true)">○ 正しい</button>
+<button onclick="answer(false)">× 誤り</button>
+<div id="result" hidden>
+<p id="judgment"></p>
+<p class="answer" id="explanation"></p>
+<button onclick="nextQuestion()">次の問題</button>
+</div>
+</div>
+</main>
+<script>
+const questions=[
+{id:1,s:"労基",q:"36協定は、所轄労働基準監督署長への届出が効力発生要件である。",a:true,e:"36協定は届出によって免罰的効力が生じる。"},
+{id:2,s:"労基",q:"1か月単位の変形労働時間制を労使協定で導入する場合、届出が効力発生要件となる。",a:false,e:"労使協定の届出義務はあるが、届出自体は効力発生要件ではない。"},
+{id:3,s:"労基",q:"通勤手当は、労働基準法上の賃金に該当しない。",a:false,e:"通勤手当は原則として賃金に該当する。ただし、割増賃金の算定基礎から除外できる場合がある。"},
+{id:4,s:"労基",q:"使用者は、労働者が出産費用に充てるため請求した場合、既往の労働に対する賃金を支払期日前でも支払わなければならない。",a:true,e:"労働基準法25条の非常時払。将来の労働に対する前払いではない。"},
+{id:5,s:"安衛",q:"安全衛生管理体制に関する規定は、すべての事業場に一律に適用される。",a:false,e:"業種や常時使用する労働者数などにより、選任義務等が異なる。"},
+{id:6,s:"労災",q:"業務災害による療養補償給付には、原則として待期3日間が必要である。",a:false,e:"療養補償給付には待期期間がない。休業補償給付には待期3日間がある。"},
+{id:7,s:"雇用",q:"雇用保険の被保険者期間を算定する際、賃金支払基礎日数が11日以上ある月は、原則として1か月として計算する。",a:true,e:"原則11日以上。11日未満の場合でも、賃金支払の基礎となった労働時間が80時間以上あれば算入される。"}
+];
+let current=null;
+let history=[];
+try{history=JSON.parse(localStorage.getItem("sharoushiHistory")||"[]");if(!Array.isArray(history))history=[]}catch(e){history=[]}
+function updateStats(){
+const correct=history.filter(x=>x.correct).length;
+document.getElementById("stats").textContent=
+"解答数："+history.length+"問 ／ 正解："+correct+"問 ／ 正答率："+(history.length?Math.round(correct/history.length*100):0)+"％";
+}
+function nextQuestion(){
+const subject=document.getElementById("subject").value;
+const pool=questions.filter(q=>subject==="all"||q.s===subject);
+if(!pool.length){alert("この科目の問題はまだありません");return}
+current=pool[Math.floor(Math.random()*pool.length)];
+document.getElementById("quiz").hidden=false;
+document.getElementById("category").textContent="科目："+current.s;
+document.getElementById("question").textContent=current.q;
+document.getElementById("result").hidden=true;
+document.querySelectorAll("#quiz > button").forEach(b=>b.disabled=false);
+}
+function answer(value){
+if(!current||!document.getElementById("result").hidden)return;
+const correct=value===current.a;
+history.push({id:current.id,correct:correct,date:new Date().toISOString()});
+try{localStorage.setItem("sharoushiHistory",JSON.stringify(history))}catch(e){alert("履歴を保存できませんでした")}
+document.getElementById("judgment").textContent=correct?"正解！":"不正解";
+document.getElementById("explanation").textContent=
+"正解："+(current.a?"○":"×")+" ／ 解説："+current.e;
+document.getElementById("result").hidden=false;
+document.querySelectorAll("#quiz > button").forEach(b=>b.disabled=true);
+updateStats();
+}
+updateStats();
+</script>
+</body>
+</html>
