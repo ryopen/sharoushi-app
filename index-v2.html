@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>社労士学習アプリ 第2版</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f1f5f9;color:#1e293b;margin:0;padding:15px}
+main{max-width:700px;margin:auto}
+h1{font-size:23px;color:#174b83}
+.card{background:white;padding:18px;margin:15px 0;border-radius:12px;box-shadow:0 2px 8px #ddd}
+button,select{width:100%;padding:13px;margin:7px 0;font-size:16px;border-radius:8px}
+button{background:#1769aa;color:white;border:0;cursor:pointer}
+button:disabled{background:#aaa}
+select{background:white;border:1px solid #bbb}
+label{display:block;margin-top:12px;font-weight:bold}
+.explanation{background:#eef6ff;padding:15px;border-radius:8px;line-height:1.8;white-space:pre-line}
+.correct{color:green;font-weight:bold}
+.wrong{color:#c62828;font-weight:bold}
+.small{font-size:13px;color:#64748b}
+</style>
+</head>
+<body>
+<main>
+<h1>社労士試験 学習アプリ</h1>
+<p>2027年試験対策・第2版</p>
+
+<div class="card">
+<h2>学習状況</h2>
+<p id="stats"></p>
+<p class="small">履歴はこのブラウザ内に保存されます。</p>
+</div>
+
+<div class="card">
+<h2>出題設定</h2>
+
+<label>科目</label>
+<select id="subject">
+<option value="all">全科目</option>
+<option value="労基">労働基準法</option>
+<option value="安衛">労働安全衛生法</option>
+<option value="労災">労災保険法</option>
+<option value="雇用">雇用保険法</option>
+</select>
+
+<label>難易度</label>
+<select id="level">
+<option value="all">すべて</option>
+<option value="基礎">基礎</option>
+<option value="標準">標準</option>
+<option value="難問">難問</option>
+</select>
+
+<label>出題モード</label>
+<select id="mode">
+<option value="random">ランダム</option>
+<option value="weak">苦手克服</option>
+<option value="new">未学習優先</option>
+<option value="review">間違えた問題の復習</option>
+</select>
+
+<label>問題形式</label>
+<select id="type">
+<option value="all">すべて</option>
+<option value="tf">○×式</option>
+<option value="five">5肢択一式</option>
+</select>
+
+<button onclick="nextQuestion()">問題を出題</button>
+</div>
+
+<div class="card" id="quiz" hidden>
+<p id="info"></p>
+<h3 id="question"></h3>
+<div id="choices"></div>
+
+<div id="result" hidden>
+<h3 id="judgment"></h3>
+<div class="explanation" id="explanation"></div>
+<button onclick="nextQuestion()">次の問題</button>
+</div>
+</div>
+</main>
+
+<script>
+const questions=[
+{
+id:1,s:"労基",level:"基礎",type:"tf",
+q:"36協定は、所轄労働基準監督署長への届出が効力発生要件である。",
+a:0,
+e:"36協定の免罰的効力は届出によって発生する。",
+law:"労働基準法36条",
+point:"労使協定の締結だけでは足りない。"
+},
+{
+id:2,s:"労基",level:"標準",type:"tf",
+q:"1か月単位の変形労働時間制を労使協定で導入する場合、届出が効力発生要件となる。",
+a:1,
+e:"労使協定による場合は届出義務があるが、届出自体は効力発生要件ではない。",
+law:"労働基準法32条の2",
+point:"36協定との違いが重要。"
+},
+{
+id:3,s:"労基",level:"基礎",type:"tf",
+q:"通勤手当は労働基準法上の賃金に該当しない。",
+a:1,
+e:"通勤手当は原則として賃金に該当する。",
+law:"労働基準法11条・37条",
+point:"賃金に該当することと、割増賃金の算定基礎から除外できることは別。"
+},
+{
+id:4,s:"労災",level:"基礎",type:"tf",
+q:"療養補償給付には3日間の待期期間がある。",
+a:1,
+e:"療養補償給付には待期期間がない。",
+law:"労災保険法13条・14条",
+point:"休業補償給付には待期3日間がある。"
+},
+{
+id:5,s:"雇用",level:"標準",type:"tf",
+q:"雇用保険の被保険者期間の算定では、賃金支払基礎日数が11日以上ある月は、原則として1か月として計算する。",
+a:0,
+e:"原則として11日以上で算入する。11日未満でも賃金支払の基礎となった労働時間が80時間以上なら算入できる。",
+law:"雇用保険法14条",
+point:"11日と80時間をセットで覚える。"
+},
+{
+id:6,s:"安衛",level:"標準",type:"tf",
+q:"安全衛生管理体制に関する選任義務は、すべての事業場で一律である。",
+a:1,
+e:"業種や事業場の規模などに応じて選任義務が異なる。",
+law:"労働安全衛生法10条以下",
+point:"業種と常時使用する労働者数を確認する。"
+},
+{
+id:7,s:"労基",level:"難問",type:"five",
+q:"次のうち、正しいものを1つ選べ。",
+choices:[
+"36協定は締結だけで免罰的効力が生じる。",
+"通勤手当は労基法上の賃金ではない。",
+"療養補償給付には3日の待期がある。",
+"労基法25条の非常時払は既往の労働に対する賃金が対象である。",
+"1か月単位の変形労働時間制は必ず労使協定で導入する。"
+],
+a:3,
+e:"正解は4。非常時払は既往の労働に対する賃金が対象。将来の労働に対する賃金の前払いを義務付けるものではない。",
+law:"労働基準法25条",
+point:"非常時払・賃金の直接払・36協定を区別する。"
+}
+];
+
+let history=[];
+try{
+history=JSON.parse(localStorage.getItem("sharoushiHistory")||"[]");
+if(!Array.isArray(history))history=[];
+}catch(e){history=[]}
+
+let current=null;
+let answered=false;
+
+function updateStats(){
+let total=history.length;
+let correct=history.filter(x=>x.correct).length;
+document.getElementById("stats").textContent=
+"累計解答："+total+"問 ／ 正解："+correct+
+"問 ／ 正答率："+(total?Math.round(correct/total*100):0)+"％";
+}
+
+function getHistory(id){
+return history.filter(x=>x.id===id);
+}
+
+function nextQuestion(){
+let s=document.getElementById("subject").value;
+let l=document.getElementById("level").value;
+let t=document.getElementById("type").value;
+let m=document.getElementById("mode").value;
+
+let pool=questions.filter(q=>
+(s==="all"||q.s===s)&&
+(l==="all"||q.level===l)&&
+(t==="all"||q.type===t)
+);
+
+if(m==="new"){
+pool=pool.filter(q=>getHistory(q.id).length===0);
+}
+if(m==="review"){
+pool=pool.filter(q=>getHistory(q.id).some(h=>!h.correct));
+}
+if(m==="weak"){
+let attempted=pool.filter(q=>getHistory(q.id).length>0);
+if(attempted.length){
+pool=attempted;
+let rates=pool.map(q=>{
+let h=getHistory(q.id);
+return h.filter(x=>x.correct).length/h.length;
+});
+let min=Math.min(...rates);
+pool=pool.filter((q,i)=>rates[i]===min);
+}
+}
+
+if(!pool.length){
+alert("該当する問題がありません。設定を変更してください。");
+return;
+}
+
+current=pool[Math.floor(Math.random()*pool.length)];
+answered=false;
+
+document.getElementById("quiz").hidden=false;
+document.getElementById("result").hidden=true;
+document.getElementById("info").textContent=
+current.s+" ／ "+current.level+" ／ "+
+(current.type==="tf"?"○×式":"5肢択一式");
+document.getElementById("question").textContent=current.q;
+
+let choices=document.getElementById("choices");
+choices.innerHTML="";
+
+let labels=current.type==="tf"?
+["○ 正しい","× 誤り"]:
+current.choices.map((c,i)=>(i+1)+"．"+c);
+
+labels.forEach((label,i)=>{
+let b=document.createElement("button");
+b.textContent=label;
+b.onclick=()=>answer(i);
+choices.appendChild(b);
+});
+
+document.getElementById("quiz").scrollIntoView({behavior:"smooth"});
+}
+
+function answer(value){
+if(!current||answered)return;
+answered=true;
+
+let correct=value===current.a;
+
+history.push({
+id:current.id,
+correct:correct,
+date:new Date().toISOString()
+});
+
+try{
+localStorage.setItem("sharoushiHistory",JSON.stringify(history));
+}catch(e){
+alert("履歴を保存できませんでした。");
+}
+
+let j=document.getElementById("judgment");
+j.textContent=correct?"正解！":"不正解";
+j.className=correct?"correct":"wrong";
+
+let answerText=current.type==="tf"?
+(current.a===0?"○":"×"):
+(current.a+1)+"番";
+
+document.getElementById("explanation").textContent=
+"【正解】\n"+answerText+
+"\n\n【解説】\n"+current.e+
+"\n\n【根拠条文】\n"+current.law+
+"\n\n【重要・ひっかけポイント】\n"+current.point;
+
+document.getElementById("result").hidden=false;
+
+document.querySelectorAll("#choices button").forEach(b=>b.disabled=true);
+
+updateStats();
+}
+
+updateStats();
+</script>
+</body>
+</html>
